@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:clear": "node scripts/clear-db.js",
+    "db:create-test-user": "node scripts/create-test-user.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.15.0",

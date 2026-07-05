@@ -11,12 +11,15 @@ export async function GET(req: NextRequest) {
   }
 
   // Prevent path traversal
-  const normalizedPath = path.normalize(filePath).replace(/^(\.\.(\/|\\|$))+/, '')
+  const normalizedPath = path.normalize(filePath)
   const absolutePath = path.join(process.cwd(), normalizedPath)
 
   // Double check path is within project root
   const rootDir = process.cwd()
-  if (!absolutePath.startsWith(rootDir)) {
+  const relative = path.relative(rootDir, absolutePath)
+  const isSafe = relative && !relative.startsWith('..') && !path.isAbsolute(relative)
+
+  if (!isSafe) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 

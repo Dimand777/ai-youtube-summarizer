@@ -7,11 +7,13 @@ export async function POST(req: NextRequest) {
   // 1. Auth Validation
   const authHeader = req.headers.get('Authorization')
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.warn('Auth token error: Missing or invalid Authorization header format')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const token = authHeader.split(' ')[1]
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !user) {
+    console.warn(`Auth token validation failed: ${authError?.message || 'User session not found'}`)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -20,16 +22,19 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
+    console.warn('Request body parsing failed: Invalid JSON')
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
   const { url } = body
   if (!url?.trim()) {
+    console.warn('URL validation failed: Empty URL provided')
     return NextResponse.json({ error: 'URL is required' }, { status: 400 })
   }
 
   const videoId = extractVideoId(url)
   if (!videoId) {
+    console.warn(`URL validation failed: Invalid YouTube URL: "${url}"`)
     return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 })
   }
 
@@ -68,12 +73,14 @@ export async function POST(req: NextRequest) {
     try {
       transcript = await getTranscript(videoId)
       if (!transcript?.trim()) {
+        console.error(`Subtitles error for video ID ${videoId}: No transcript content retrieved`)
         return NextResponse.json(
           { error: 'Could not fetch transcript. Video may have no subtitles.' },
           { status: 502 }
         )
       }
     } catch (err: any) {
+      console.error(`Subtitles fetching failed for video ID ${videoId}:`, err)
       return NextResponse.json(
         { error: `Could not fetch transcript: ${err.message || err}` },
         { status: 502 }
@@ -85,7 +92,7 @@ export async function POST(req: NextRequest) {
     try {
       summaryText = await summarize(transcript)
     } catch (err: any) {
-      console.error('Gemini error:', err)
+      console.error(`Gemini API error for video ID ${videoId}:`, err)
       return NextResponse.json({ error: 'Gemini API error' }, { status: 502 })
     }
 
@@ -128,7 +135,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     )
   } catch (globalError: any) {
-    console.error('Unexpected server error:', globalError)
+    console.error('Unexpected server error during summarization process:', globalError)
     return NextResponse.json({ error: 'Internal server error' }, { status: 502 })
   }
 }
