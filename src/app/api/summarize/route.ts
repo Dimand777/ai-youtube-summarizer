@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractVideoId, getTranscript } from '@/lib/youtube'
 import { summarize } from '@/lib/gemini'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   // 1. Auth Validation
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // 3. Check Supabase cache
-    const { data: cached, error: cacheError } = await supabase
+    const { data: cached, error: cacheError } = await supabaseAdmin
       .from('summaries')
       .select('*')
       .eq('video_id', videoId)
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     if (cached) {
       // Add to user history if not already present, or update created_at
-      await supabase.from('user_history').upsert(
+      await supabaseAdmin.from('user_history').upsert(
         {
           user_id: user.id,
           video_id: videoId,
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     const thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
 
     // 6. Save summary to database
-    const { error: dbError } = await supabase.from('summaries').insert({
+    const { error: dbError } = await supabaseAdmin.from('summaries').insert({
       video_id: videoId,
       url,
       summary: summaryText,
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 7. Save to user history
-    const { error: historyError } = await supabase.from('user_history').upsert(
+    const { error: historyError } = await supabaseAdmin.from('user_history').upsert(
       {
         user_id: user.id,
         video_id: videoId,
