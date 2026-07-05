@@ -17,11 +17,127 @@ function extractVideoId(url: string): string | null {
   return null
 }
 
+const STAGES = [
+  'Получение субтитров...',
+  'ИИ анализирует текст...',
+  'Формируем саммари...',
+]
+
+type Result = {
+  videoId: string
+  summary: string
+  transcript: string
+  thumbnail: string
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function renderLineContent(text: string) {
+  const escaped = escapeHtml(text)
+  const html = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+  return <span dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+function MarkdownRenderer({ text }: { text: string }) {
+  const lines = text.split('\n')
+  type Block = 
+    | { type: 'h3'; content: string }
+    | { type: 'blockquote'; content: string }
+    | { type: 'list'; items: string[] }
+    | { type: 'paragraph'; content: string }
+    | { type: 'empty' }
+
+  const blocks: Block[] = []
+  let currentList: string[] | null = null
+
+  for (const line of lines) {
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      const content = line.slice(2)
+      if (currentList) {
+        currentList.push(content)
+      } else {
+        currentList = [content]
+      }
+    } else {
+      if (currentList) {
+        blocks.push({ type: 'list', items: currentList })
+        currentList = null
+      }
+
+      if (line.startsWith('## ')) {
+        blocks.push({ type: 'h3', content: line.slice(3) })
+      } else if (line.startsWith('> ')) {
+        blocks.push({ type: 'blockquote', content: line.slice(2) })
+      } else if (!line.trim()) {
+        blocks.push({ type: 'empty' })
+      } else {
+        blocks.push({ type: 'paragraph', content: line })
+      }
+    }
+  }
+
+  if (currentList) {
+    blocks.push({ type: 'list', items: currentList })
+  }
+
+  return (
+    <div className="text-sm leading-relaxed text-slate-300 space-y-3 select-text text-left">
+      {blocks.map((block, i) => {
+        if (block.type === 'h3') {
+          return (
+            <h3 key={i} className="text-base font-bold text-white mt-6 mb-2">
+              {renderLineContent(block.content)}
+            </h3>
+          )
+        }
+        if (block.type === 'blockquote') {
+          return (
+            <blockquote key={i} className="border-l-4 border-red-500 pl-4 italic text-slate-400 my-3 bg-slate-800/40 py-2 rounded-r-lg">
+              {renderLineContent(block.content)}
+            </blockquote>
+          )
+        }
+        if (block.type === 'list') {
+          return (
+            <ul key={i} className="list-disc ml-5 mb-3 space-y-1.5 pl-1 text-slate-300">
+              {block.items.map((item, j) => (
+                <li key={j} className="text-slate-300">
+                  {renderLineContent(item)}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+        if (block.type === 'empty') {
+          return <div key={i} className="h-2" />
+        }
+        return (
+          <p key={i} className="mb-2 leading-relaxed">
+            {renderLineContent(block.content)}
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Home() {
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
   const [userSession, setUserSession] = useState<any>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<Result | null>(null)
+  const [tab, setTab] = useState<'summary' | 'transcript'>('summary')
+  const [copied, setCopied] = useState(false)
+  const [stageIdx, setStageIdx] = useState(0)
   const router = useRouter()
 
   useEffect(() => {
@@ -45,9 +161,10 @@ export default function Home() {
     setUserSession(null)
   }
 
-  function handleSummarize(e: React.FormEvent) {
+  async function handleSummarize(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setResult(null)
 
     if (!url.trim()) {
       setError('Введите ссылку на YouTube-видео.')
@@ -60,13 +177,51 @@ export default function Home() {
       return
     }
 
-    if (userSession) {
-      // User is logged in, redirect to dashboard to start summarizing
-      router.push(`/dashboard?url=${encodeURIComponent(url)}`)
-    } else {
-      // User is not logged in, save url and redirect to login
-      sessionStorage.setItem('pendingUrl', url)
-      router.push('/login')
+    setLoading(true)
+    setStageIdx(0)
+
+    let s = 0
+    const iv = setInterval(() => {
+      s = Math.min(s + 1, STAGES.length - 1)
+      setStageIdx(s)
+    }, 1500)
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (userSession?.access_token) {
+        headers['Authorization'] = `Bearer ${userSession.access_token}`
+      }
+
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ url }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Ошибка при получении саммари')
+        return
+      }
+
+      setResult(data)
+      setTab('summary')
+    } catch (err) {
+      setError('Не удалось связаться с сервером.')
+    } finally {
+      clearInterval(iv)
+      setLoading(false)
+    }
+  }
+
+  function copyContent() {
+    const text = tab === 'summary' ? result?.summary : result?.transcript
+    if (text) {
+      navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
   }
 
@@ -120,7 +275,7 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-6 py-16 text-center z-10">
+      <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-6 py-16 text-center z-10 w-full">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-xs font-semibold text-red-400 mb-6 animate-pulse">
           ⚡ ИИ саммаризация YouTube видео
         </div>
@@ -146,15 +301,26 @@ export default function Home() {
                   value={url}
                   onChange={e => setUrl(e.target.value)}
                   placeholder="https://www.youtube.com/watch?v=..."
-                  className="w-full h-12 pl-4 pr-4 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-100 placeholder-slate-500 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all"
+                  disabled={loading}
+                  className="w-full h-12 pl-4 pr-4 rounded-xl border border-slate-700/60 bg-slate-900/60 text-slate-100 placeholder-slate-500 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all disabled:opacity-60"
                 />
               </div>
               <button
                 type="submit"
-                className="h-12 px-6 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/10 hover:shadow-red-600/20 hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                disabled={loading}
+                className="h-12 px-6 bg-gradient-to-r from-red-600 to-rose-500 hover:from-red-500 hover:to-rose-400 disabled:opacity-60 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/10 hover:shadow-red-600/20 hover:scale-[1.01] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
               >
-                <span>Саммаризировать</span>
-                <span className="text-xs">→</span>
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Обработка</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Саммаризировать</span>
+                    <span className="text-xs">→</span>
+                  </>
+                )}
               </button>
             </div>
 
@@ -170,36 +336,144 @@ export default function Home() {
           </form>
         </div>
 
+        {/* Loading / Results Panel */}
+        {loading && (
+          <div className="w-full max-w-2xl bg-slate-800/20 border border-slate-800/60 rounded-2xl p-8 text-center shadow-lg mb-12">
+            <div className="w-10 h-10 border-4 border-red-900/30 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-sm font-semibold text-slate-300 mb-4">{STAGES[stageIdx]}</p>
+            <div className="space-y-2.5 max-w-[280px] mx-auto">
+              {[80, 60, 90, 50].map((w, i) => (
+                <div
+                  key={i}
+                  style={{ width: `${w}%` }}
+                  className="h-2 bg-slate-800 rounded-full mx-auto animate-pulse"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {result && (
+          <div className="w-full max-w-2xl bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl mb-12 flex flex-col text-left">
+            {/* Thumbnail Header */}
+            <div className="relative h-48 sm:h-60 w-full bg-black overflow-hidden flex-shrink-0">
+              <img
+                src={result.thumbnail}
+                alt="Video thumbnail"
+                className="w-full h-full object-cover opacity-75"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent flex items-end p-6">
+                <div className="w-full">
+                  <p className="text-[10px] text-red-400 font-bold tracking-wider uppercase">YouTube Источник</p>
+                  <a
+                    href={`https://youtube.com/watch?v=${result.videoId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white hover:underline text-sm font-semibold mt-1 inline-flex items-center gap-1.5 truncate max-w-full"
+                  >
+                    youtube.com/watch?v={result.videoId}
+                    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div role="tablist" className="flex px-5 border-b border-slate-800/60 bg-slate-800/10 flex-shrink-0">
+              {(['summary', 'transcript'] as const).map(t => (
+                <button
+                  key={t}
+                  role="tab"
+                  aria-selected={tab === t}
+                  onClick={() => setTab(t)}
+                  className={`px-5 py-3.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                    tab === t ? 'border-red-500 text-red-500' : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {t === 'summary' ? 'САММАРИ' : 'ТРАНСКРИПТ'}
+                </button>
+              ))}
+            </div>
+
+            {/* Content Area */}
+            <div className="p-6 md:p-8 max-h-[400px] overflow-y-auto bg-slate-900/30">
+              {tab === 'summary' ? (
+                <MarkdownRenderer text={result.summary} />
+              ) : (
+                <p className="text-sm leading-relaxed text-slate-300 whitespace-pre-wrap select-text">
+                  {result.transcript}
+                </p>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex justify-between items-center px-6 py-4 border-t border-slate-800/40 bg-slate-800/10 flex-shrink-0">
+              <div className="text-xs text-slate-500">
+                Саммари сформировано с помощью ИИ
+              </div>
+              <button
+                onClick={copyContent}
+                className={`px-4 py-2 border rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  copied
+                    ? 'text-green-400 border-green-500/20 bg-green-500/10'
+                    : 'text-slate-300 border-slate-700 bg-slate-800/40 hover:bg-slate-800/80 hover:text-white'
+                }`}
+              >
+                {copied ? (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Скопировано
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                    Копировать
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Small features list */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-3xl text-left">
-          <div className="p-5 bg-slate-800/25 border border-slate-800/60 rounded-xl hover:border-slate-700/50 transition-colors">
-            <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-lg mb-3">
-              ⚡
+        {!result && !loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-3xl text-left">
+            <div className="p-5 bg-slate-800/25 border border-slate-800/60 rounded-xl hover:border-slate-700/50 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-lg mb-3">
+                ⚡
+              </div>
+              <h3 className="font-semibold text-sm text-slate-200 mb-1">Мгновенный анализ</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Не нужно смотреть длинные видео. Извлекаем ключевую суть всего за 10-15 секунд.
+              </p>
             </div>
-            <h3 className="font-semibold text-sm text-slate-200 mb-1">Мгновенный анализ</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Не нужно смотреть длинные видео. Извлекаем ключевую суть всего за 10-15 секунд.
-            </p>
-          </div>
-          <div className="p-5 bg-slate-800/25 border border-slate-800/60 rounded-xl hover:border-slate-700/50 transition-colors">
-            <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-lg mb-3">
-              🎯
+            <div className="p-5 bg-slate-800/25 border border-slate-800/60 rounded-xl hover:border-slate-700/50 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-lg mb-3">
+                🎯
             </div>
-            <h3 className="font-semibold text-sm text-slate-200 mb-1">Качественный ИИ</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Использование Google Gemini 1.5 Flash гарантирует структурированность и точность выводов.
-            </p>
-          </div>
-          <div className="p-5 bg-slate-800/25 border border-slate-800/60 rounded-xl hover:border-slate-700/50 transition-colors">
-            <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-lg mb-3">
-              💾
+              <h3 className="font-semibold text-sm text-slate-200 mb-1">Качественный ИИ</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Использование Google Gemini 1.5 Flash гарантирует структурированность и точность выводов.
+              </p>
             </div>
-            <h3 className="font-semibold text-sm text-slate-200 mb-1">Сохранение истории</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Войдите через Google, чтобы хранить все свои прошлые саммари в одном месте.
-            </p>
+            <div className="p-5 bg-slate-800/25 border border-slate-800/60 rounded-xl hover:border-slate-700/50 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-lg mb-3">
+                💾
+              </div>
+              <h3 className="font-semibold text-sm text-slate-200 mb-1">Сохранение истории</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Войдите в личный кабинет, чтобы хранить все свои прошлые саммари в одном месте.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Footer */}

@@ -4,17 +4,15 @@ import { summarize } from '@/lib/gemini'
 import { supabase, supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
-  // 1. Auth Validation
+  // 1. Auth Validation (Optional)
+  let user: any = null
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.warn('Auth token error: Missing or invalid Authorization header format')
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  const token = authHeader.split(' ')[1]
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) {
-    console.warn(`Auth token validation failed: ${authError?.message || 'User session not found'}`)
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1]
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+    if (!authError && authUser) {
+      user = authUser
+    }
   }
 
   // 2. Body parsing & validation
@@ -48,14 +46,16 @@ export async function POST(req: NextRequest) {
 
     if (cached) {
       // Add to user history if not already present, or update created_at
-      await supabaseAdmin.from('user_history').upsert(
-        {
-          user_id: user.id,
-          video_id: videoId,
-          created_at: new Date().toISOString()
-        },
-        { onConflict: 'user_id,video_id' }
-      )
+      if (user) {
+        await supabaseAdmin.from('user_history').upsert(
+          {
+            user_id: user.id,
+            video_id: videoId,
+            created_at: new Date().toISOString()
+          },
+          { onConflict: 'user_id,video_id' }
+        )
+      }
 
       return NextResponse.json(
         {
@@ -111,18 +111,20 @@ export async function POST(req: NextRequest) {
       console.error('Failed to save summary cache to Supabase:', dbError)
     }
 
-    // 7. Save to user history
-    const { error: historyError } = await supabaseAdmin.from('user_history').upsert(
-      {
-        user_id: user.id,
-        video_id: videoId,
-        created_at: new Date().toISOString()
-      },
-      { onConflict: 'user_id,video_id' }
-    )
+    // 7. Save to user history (only if authenticated)
+    if (user) {
+      const { error: historyError } = await supabaseAdmin.from('user_history').upsert(
+        {
+          user_id: user.id,
+          video_id: videoId,
+          created_at: new Date().toISOString()
+        },
+        { onConflict: 'user_id,video_id' }
+      )
 
-    if (historyError) {
-      console.error('Failed to save user history link to Supabase:', historyError)
+      if (historyError) {
+        console.error('Failed to save user history link to Supabase:', historyError)
+      }
     }
 
     return NextResponse.json(
