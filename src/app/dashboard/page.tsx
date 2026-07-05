@@ -245,6 +245,20 @@ export default function Dashboard() {
       } else {
         setUserSession(session)
         setAuthLoading(false)
+
+        // Process auto-summarization URL
+        const params = new URLSearchParams(window.location.search)
+        const queryUrl = params.get('url')
+        const sessionUrl = sessionStorage.getItem('pendingUrl')
+        const pendingUrl = sessionUrl || queryUrl
+        if (pendingUrl) {
+          setUrl(pendingUrl)
+          sessionStorage.removeItem('pendingUrl')
+          if (queryUrl) {
+            window.history.replaceState({}, document.title, window.location.pathname)
+          }
+          handleSubmit(pendingUrl, session)
+        }
       }
     })
 
@@ -260,6 +274,7 @@ export default function Dashboard() {
     return () => {
       subscription.unsubscribe()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   // Load history from Supabase when session is loaded
@@ -333,16 +348,19 @@ export default function Dashboard() {
     }
   }, [sidebarTab, fileTree])
 
-  async function handleSubmit() {
+  async function handleSubmit(urlToUse?: string, sessionToUse?: any) {
+    const activeUrl = urlToUse !== undefined ? urlToUse : url
+    const activeSession = sessionToUse || userSession
+
     setError('')
-    if (!url.trim()) {
+    if (!activeUrl.trim()) {
       setError('Введите ссылку на YouTube-видео.')
       showToast('Введите ссылку на YouTube-видео.', 'error')
       return
     }
 
     if (loading) return
-    if (!userSession) {
+    if (!activeSession) {
       setError('Вы не авторизованы.')
       showToast('Вы не авторизованы.', 'error')
       return
@@ -363,9 +381,9 @@ export default function Dashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userSession.access_token}`
+          'Authorization': `Bearer ${activeSession.access_token}`
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: activeUrl }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -379,7 +397,7 @@ export default function Dashboard() {
       const now = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })
       const newItem: HistoryItem = {
         id: data.videoId,
-        url,
+        url: activeUrl,
         result: data,
         date: `Сегодня, ${now}`
       }
@@ -718,7 +736,7 @@ export default function Dashboard() {
             </div>
             <button
               data-testid="submit-url-btn"
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               disabled={loading}
               className="h-11 px-6 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
             >

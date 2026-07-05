@@ -60,6 +60,24 @@ export default function Login() {
     }
   }
 
+  async function handleGoogleLogin() {
+    setError('')
+    setMessage('')
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      })
+      if (error) throw error
+    } catch (err: any) {
+      setError(err.message || 'Ошибка входа через Google')
+      setLoading(false)
+    }
+  }
+
   return (
     <main data-testid="login-container" className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="max-w-md w-full bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
@@ -76,6 +94,40 @@ export default function Login() {
               ? 'Зарегистрируйтесь, чтобы сохранять историю саммари'
               : 'Введите свои данные для доступа к истории'}
           </p>
+        </div>
+
+        {/* Google Login Button */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full h-11 border border-gray-200 hover:bg-gray-50 disabled:opacity-60 text-gray-700 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer mb-6"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <path
+              fill="#4285F4"
+              d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.69a5.74 5.74 0 0 1-2.49 3.77v3.12h4.01c2.34-2.16 3.69-5.32 3.69-8.74Z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-4.01-3.12c-1.12.75-2.54 1.19-3.95 1.19-3.05 0-5.63-2.06-6.55-4.83H1.31v3.23A12 12 0 0 0 12 24Z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.45 14.33a7.14 7.14 0 0 1 0-4.66V6.44H1.31a12 12 0 0 0 0 11.12l4.14-3.23Z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.22 0 12 0A12 12 0 0 0 1.31 6.44L5.45 9.67C6.37 6.9 8.95 4.75 12 4.75Z"
+            />
+          </svg>
+          Войти через Google
+        </button>
+
+        <div className="relative flex py-2 items-center mb-4">
+          <div className="flex-grow border-t border-gray-100"></div>
+          <span className="flex-shrink mx-4 text-gray-400 text-xs font-medium uppercase tracking-wider">или через почту</span>
+          <div className="flex-grow border-t border-gray-100"></div>
         </div>
 
         {/* Form */}
