@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { DonateModal } from '@/components/DonateModal'
 
 function extractVideoId(url: string): string | null {
   const patterns = [
@@ -138,6 +139,7 @@ export default function Home() {
   const [tab, setTab] = useState<'summary' | 'transcript'>('summary')
   const [copied, setCopied] = useState(false)
   const [stageIdx, setStageIdx] = useState(0)
+  const [isDonateOpen, setIsDonateOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -243,6 +245,12 @@ export default function Home() {
         </Link>
 
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsDonateOpen(true)}
+            className="h-10 px-4 rounded-xl border border-rose-500/20 hover:border-rose-500/40 bg-rose-500/5 hover:bg-rose-500/10 text-xs font-bold text-rose-400 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-rose-500/5 hover:scale-[1.02]"
+          >
+            <span>💝 Поддержать</span>
+          </button>
           {authLoading ? (
             <div className="w-5 h-5 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin" />
           ) : userSession ? (
@@ -334,6 +342,16 @@ export default function Home() {
               * Поддерживаются стандартные ссылки YouTube, укороченные youtu.be и YouTube Shorts.
             </p>
           </form>
+
+          {/* Large Donate Button */}
+          <div className="mt-5 pt-5 border-t border-slate-700/40 flex justify-center">
+            <button
+              onClick={() => setIsDonateOpen(true)}
+              className="w-full h-12 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 text-rose-400 font-extrabold text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-rose-500/5 hover:scale-[1.01]"
+            >
+              <span>💝 Пожертвовать разработчику проекта</span>
+            </button>
+          </div>
         </div>
 
         {/* Loading / Results Panel */}
@@ -477,9 +495,17 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full text-center py-6 text-xs text-slate-500 border-t border-slate-800/30 z-10">
-        © {new Date().getFullYear()} AI YouTube Summarizer. Все права защищены.
+      <footer className="w-full max-w-7xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 border-t border-slate-800/30 z-10 gap-4">
+        <span>© {new Date().getFullYear()} AI YouTube Summarizer. Все права защищены.</span>
+        <button
+          onClick={() => setIsDonateOpen(true)}
+          className="font-bold text-rose-400 hover:text-rose-300 transition-colors flex items-center gap-1 cursor-pointer"
+        >
+          💝 Пожертвовать разработчику
+        </button>
       </footer>
+
+      <DonateModal isOpen={isDonateOpen} onClose={() => setIsDonateOpen(false)} />
     </main>
   )
 }
