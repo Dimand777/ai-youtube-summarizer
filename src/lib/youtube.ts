@@ -1,4 +1,8 @@
 import { YoutubeTranscript } from 'youtube-transcript'
+import { ProxyAgent } from 'undici'
+
+const proxyUrl = process.env.YOUTUBE_PROXY
+const proxyAgent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined
 
 async function customFetch(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   let targetUrl = typeof url === 'string' ? url : url.toString()
@@ -17,6 +21,7 @@ async function customFetch(url: RequestInfo | URL, options?: RequestInit): Promi
   const res = await fetch(targetUrl, {
     ...options,
     headers,
+    ...(proxyAgent && { dispatcher: proxyAgent } as any),
   })
 
   const contentType = res.headers.get('content-type') || ''
