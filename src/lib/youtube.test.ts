@@ -40,8 +40,8 @@ describe('youtube utils', () => {
   describe('getTranscript', () => {
     it('should fetch transcript successfully in requested language', async () => {
       const mockItems = [
-        { text: 'Привет', offset: 0 },
-        { text: 'мир', offset: 1000 }
+        { text: 'Привет', offset: 0, duration: 1000 },
+        { text: 'мир', offset: 1000, duration: 1000 }
       ]
       vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(mockItems)
 
@@ -52,8 +52,8 @@ describe('youtube utils', () => {
 
     it('should fallback to default language if requested language fails', async () => {
       const mockItems = [
-        { text: 'Hello', offset: 0 },
-        { text: 'world', offset: 1000 }
+        { text: 'Hello', offset: 0, duration: 1000 },
+        { text: 'world', offset: 1000, duration: 1000 }
       ]
       
       // Russian request fails, default request succeeds

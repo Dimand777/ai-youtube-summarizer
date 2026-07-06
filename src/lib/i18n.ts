@@ -1,0 +1,156 @@
+export type Locale = 'ru' | 'en'
+
+export const translations = {
+  ru: {
+    meta: {
+      title: 'AI YouTube Summarizer — Саммаризация YouTube видео с помощью ИИ',
+      description: 'Мгновенно получайте краткую выжимку, ключевые тезисы, таймкоды глав и FAQ из любого YouTube видео с помощью искусственного интеллекта.',
+    },
+    header: {
+      logo: 'Summarizer',
+      login: 'Войти',
+      logout: 'Выйти',
+      dashboard: 'Панель',
+      donate: '💝 Поддержать',
+    },
+    landing: {
+      badge: '⚡ ИИ саммаризация YouTube видео',
+      title: 'Получите краткую выжимку любого YouTube видео',
+      subtitle: 'Вставьте ссылку на YouTube-видео ниже. Наш искусственный интеллект мгновенно проанализирует субтитры и сформирует структурированное саммари, сэкономив ваше время.',
+      inputPlaceholder: 'Вставьте ссылку на YouTube видео',
+      inputHelp: '* Поддерживаются стандартные ссылки YouTube, укороченные youtu.be и YouTube Shorts.',
+      btnSummarize: 'Саммаризировать',
+      btnProcessing: 'Обработка',
+      btnDonateMain: '💝 Пожертвовать разработчику проекта',
+      stages: [
+        'Получение субтитров...',
+        'ИИ анализирует текст...',
+        'Формируем саммари...',
+      ],
+      errors: {
+        emptyUrl: 'Введите ссылку на YouTube-видео.',
+        invalidUrl: 'Некорректная ссылка на YouTube-видео.',
+        serverError: 'Не удалось связаться с сервером.',
+      },
+    },
+    donate: {
+      title: 'Поддержать разработчика',
+      subtitle: 'Если проект сэкономил ваше время и был полезен, вы можете поблагодарить за разработку и хостинг, отправив любую сумму на крипто-кошелек:',
+      close: 'Закрыть',
+      copy: 'Копировать',
+      copied: 'Скопировано',
+    },
+    login: {
+      title: 'Вход в систему',
+      subtitle: 'Войдите, чтобы сохранять историю ваших саммари и иметь к ним доступ с любого устройства.',
+      email: 'Email адрес',
+      password: 'Пароль',
+      btnSignIn: 'Войти',
+      btnSignUp: 'Регистрация',
+      noAccount: 'Нет аккаунта? Зарегистрироваться',
+      hasAccount: 'Уже есть аккаунт? Войти',
+      loading: 'Загрузка...',
+      successRegister: 'Регистрация успешна! Проверьте почту для подтверждения аккаунта.',
+    },
+    dashboard: {
+      title: 'История ваших саммари',
+      subtitle: 'Здесь хранятся все обработанные вами видеоролики.',
+      welcome: 'Добро пожаловать в панель управления!',
+      searchPlaceholder: 'Поиск по истории...',
+      noHistory: 'У вас ещё нет сохранённых саммари. Вставьте ссылку на главном экране!',
+      clearHistory: 'Очистить историю',
+      sidebar: {
+        history: 'История саммари',
+        account: 'Мой аккаунт',
+        donate: '💝 Поддержать проект',
+        logout: 'Выйти',
+      },
+    },
+    result: {
+      source: 'YouTube Источник',
+      tabSummary: 'САММАРИ',
+      tabTranscript: 'ТРАНСКРИПТ',
+      aiDisclaimer: 'Саммари сформировано с помощью ИИ',
+      btnCopy: 'Копировать',
+      btnCopied: 'Скопировано',
+    },
+  },
+  en: {
+    meta: {
+      title: 'AI YouTube Summarizer — Summarize YouTube Videos with AI',
+      description: 'Instantly get summaries, key takeaways, chapter timestamps, and FAQs from any YouTube video using artificial intelligence.',
+    },
+    header: {
+      logo: 'Summarizer',
+      login: 'Sign In',
+      logout: 'Log Out',
+      dashboard: 'Dashboard',
+      donate: '💝 Support',
+    },
+    landing: {
+      badge: '⚡ AI YouTube Video Summarization',
+      title: 'Get a brief summary of any YouTube video',
+      subtitle: 'Paste a YouTube video link below. Our artificial intelligence will instantly analyze the subtitles and generate a structured summary, saving you time.',
+      inputPlaceholder: 'Paste YouTube video link',
+      inputHelp: '* Standard YouTube links, shortened youtu.be, and YouTube Shorts are supported.',
+      btnSummarize: 'Summarize',
+      btnProcessing: 'Processing',
+      btnDonateMain: '💝 Donate to the Project Developer',
+      stages: [
+        'Fetching subtitles...',
+        'AI analyzing text...',
+        'Generating summary...',
+      ],
+      errors: {
+        emptyUrl: 'Please enter a YouTube video link.',
+        invalidUrl: 'Invalid YouTube video link.',
+        serverError: 'Failed to connect to the server.',
+      },
+    },
+    donate: {
+      title: 'Support the Developer',
+      subtitle: 'If this project has saved you time and was useful, you can thank the developer for hosting and development costs by sending any amount to the crypto wallets below:',
+      close: 'Close',
+      copy: 'Copy',
+      copied: 'Copied',
+    },
+    login: {
+      title: 'Sign In',
+      subtitle: 'Sign in to save your summary history and access it from any of your devices.',
+      email: 'Email Address',
+      password: 'Password',
+      btnSignIn: 'Sign In',
+      btnSignUp: 'Sign Up',
+      noAccount: "Don't have an account? Sign Up",
+      hasAccount: 'Already have an account? Sign In',
+      loading: 'Loading...',
+      successRegister: 'Registration successful! Check your email for a confirmation link.',
+    },
+    dashboard: {
+      title: 'Your Summary History',
+      subtitle: 'All videos processed by you are stored here.',
+      welcome: 'Welcome to the Dashboard!',
+      searchPlaceholder: 'Search history...',
+      noHistory: 'You do not have any saved summaries yet. Paste a link on the main page!',
+      clearHistory: 'Clear History',
+      sidebar: {
+        history: 'Summary History',
+        account: 'My Account',
+        donate: '💝 Support Project',
+        logout: 'Log Out',
+      },
+    },
+    result: {
+      source: 'YouTube Source',
+      tabSummary: 'SUMMARY',
+      tabTranscript: 'TRANSCRIPT',
+      aiDisclaimer: 'Summary generated by AI',
+      btnCopy: 'Copy',
+      btnCopied: 'Copied',
+    },
+  },
+}
+
+export function getTranslation(locale: Locale) {
+  return translations[locale] || translations.ru
+}

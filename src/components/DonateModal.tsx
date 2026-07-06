@@ -1,11 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { getTranslation, Locale } from '@/lib/i18n'
 
 type DonateModalProps = {
   isOpen: boolean
   onClose: () => void
+  locale?: Locale
 }
-
 type Coin = {
   name: string
   symbol: string
@@ -17,10 +18,9 @@ type Coin = {
   icon: React.ReactNode
 }
 
-export function DonateModal({ isOpen, onClose }: DonateModalProps) {
+export function DonateModal({ isOpen, onClose, locale = 'ru' }: DonateModalProps) {
   const [copiedCoin, setCopiedCoin] = useState<string | null>(null)
-
-  // Close on Escape key press
+  const t = getTranslation(locale)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -129,13 +129,13 @@ export function DonateModal({ isOpen, onClose }: DonateModalProps) {
             💝
           </div>
           <div>
-            <h3 className="text-lg md:text-xl font-extrabold text-white tracking-tight">Поддержать разработчика</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Пожертвование на развитие сервиса</p>
+            <h3 className="text-lg md:text-xl font-extrabold text-white tracking-tight">{t.donate.title}</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{locale === 'ru' ? 'Пожертвование на развитие сервиса' : 'Donation for service development'}</p>
           </div>
         </div>
 
         <p className="text-xs md:text-sm text-slate-400 leading-relaxed mb-6">
-          Ваша поддержка помогает развивать проект, покрывать серверные расходы и оплачивать запросы к API Google Gemini. Спасибо, что пользуетесь Summarizer!
+          {t.donate.subtitle}
         </p>
 
         {/* Coins List */}
@@ -180,14 +180,14 @@ export function DonateModal({ isOpen, onClose }: DonateModalProps) {
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span>Скопировано</span>
+                    <span>{t.donate.copied}</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                     </svg>
-                    <span>Копировать</span>
+                    <span>{t.donate.copy}</span>
                   </>
                 )}
               </button>

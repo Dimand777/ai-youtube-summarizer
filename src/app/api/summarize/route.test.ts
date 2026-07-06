@@ -139,8 +139,8 @@ describe('POST /api/summarize', () => {
     expect(data.summary).toBe('Свежее саммари видео')
     expect(data.transcript).toBe('Свежий транскрипт видео')
 
-    expect(getTranscript).toHaveBeenCalledWith('12345678901')
-    expect(summarize).toHaveBeenCalledWith('Свежий транскрипт видео')
+    expect(getTranscript).toHaveBeenCalledWith('12345678901', 'ru')
+    expect(summarize).toHaveBeenCalledWith('Свежий транскрипт видео', 'ru')
     expect(mockInsert).toHaveBeenCalledWith({
       video_id: '12345678901',
       url: 'https://youtube.com/watch?v=12345678901',

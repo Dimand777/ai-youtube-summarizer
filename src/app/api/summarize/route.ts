@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 2. Body parsing & validation
-  let body: { url?: string }
+  let body: { url?: string; lang?: 'ru' | 'en' }
   try {
     body = await req.json()
   } catch {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { url } = body
+  const { url, lang = 'ru' } = body
   if (!url?.trim()) {
     console.warn('URL validation failed: Empty URL provided')
     return NextResponse.json({ error: 'URL is required' }, { status: 400 })
@@ -36,12 +36,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 })
   }
 
+  const cacheKey = lang === 'en' ? `${videoId}:en` : videoId
+
   try {
     // 3. Check Supabase cache
     const { data: cached, error: cacheError } = await supabaseAdmin
       .from('summaries')
       .select('*')
-      .eq('video_id', videoId)
+      .eq('video_id', cacheKey)
       .maybeSingle()
 
     if (cached) {
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
         await supabaseAdmin.from('user_history').upsert(
           {
             user_id: user.id,
-            video_id: videoId,
+            video_id: cacheKey,
             created_at: new Date().toISOString()
           },
           { onConflict: 'user_id,video_id' }
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
     // 4. Fetch transcript for new video
     let transcript: string
     try {
-      transcript = await getTranscript(videoId)
+      transcript = await getTranscript(videoId, lang)
       if (!transcript?.trim()) {
         console.error(`Subtitles error for video ID ${videoId}: No transcript content retrieved`)
         return NextResponse.json(
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
     // 5. Generate summary using Gemini AI
     let summaryText: string
     try {
-      summaryText = await summarize(transcript)
+      summaryText = await summarize(transcript, lang)
     } catch (err: any) {
       console.error(`Gemini API error for video ID ${videoId}:`, err)
       return NextResponse.json({ error: 'Gemini API error' }, { status: 502 })
@@ -100,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     // 6. Save summary to database
     const { error: dbError } = await supabaseAdmin.from('summaries').insert({
-      video_id: videoId,
+      video_id: cacheKey,
       url,
       summary: summaryText,
       transcript,
@@ -116,7 +118,7 @@ export async function POST(req: NextRequest) {
       const { error: historyError } = await supabaseAdmin.from('user_history').upsert(
         {
           user_id: user.id,
-          video_id: videoId,
+          video_id: cacheKey,
           created_at: new Date().toISOString()
         },
         { onConflict: 'user_id,video_id' }

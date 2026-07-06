@@ -104,13 +104,29 @@ function formatTime(ms: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-export async function getTranscript(videoId: string): Promise<string> {
-  const items = await YoutubeTranscript.fetchTranscript(videoId, { 
-    lang: 'ru',
-    fetch: customFetch
-  }).catch(() => YoutubeTranscript.fetchTranscript(videoId, {
-    fetch: customFetch
-  }))
+export async function getTranscript(videoId: string, lang: 'ru' | 'en' = 'ru'): Promise<string> {
+  let items
+  if (lang === 'en') {
+    items = await YoutubeTranscript.fetchTranscript(videoId, { 
+      lang: 'en',
+      fetch: customFetch
+    }).catch(() => YoutubeTranscript.fetchTranscript(videoId, {
+      lang: 'ru',
+      fetch: customFetch
+    })).catch(() => YoutubeTranscript.fetchTranscript(videoId, {
+      fetch: customFetch
+    }))
+  } else {
+    items = await YoutubeTranscript.fetchTranscript(videoId, { 
+      lang: 'ru',
+      fetch: customFetch
+    }).catch(() => YoutubeTranscript.fetchTranscript(videoId, {
+      lang: 'en',
+      fetch: customFetch
+    })).catch(() => YoutubeTranscript.fetchTranscript(videoId, {
+      fetch: customFetch
+    }))
+  }
 
   const blocks: string[] = []
   let currentBlockTime = 0
