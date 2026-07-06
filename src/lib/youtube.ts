@@ -6,7 +6,18 @@ async function customFetch(url: RequestInfo | URL, options?: RequestInit): Promi
     targetUrl = targetUrl.replace('https://www.youtube.com', 'https://m.youtube.com')
   }
 
-  const res = await fetch(targetUrl, options)
+  const headers = {
+    ...options?.headers,
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Cookie': 'SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg',
+  }
+
+  const res = await fetch(targetUrl, {
+    ...options,
+    headers,
+  })
 
   const contentType = res.headers.get('content-type') || ''
   if (contentType.includes('text/html')) {
