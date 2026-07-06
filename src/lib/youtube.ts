@@ -6,18 +6,58 @@ const proxyAgent = proxyUrl ? new ProxyAgent(proxyUrl) : undefined
 
 async function customFetch(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   let targetUrl = typeof url === 'string' ? url : url.toString()
-  if (targetUrl.startsWith('https://www.youtube.com')) {
+  
+  // Only rewrite timedtext URL to mobile domain to avoid the 0-byte response bug
+  if (targetUrl.startsWith('https://www.youtube.com/api/timedtext')) {
     targetUrl = targetUrl.replace('https://www.youtube.com', 'https://m.youtube.com')
   }
 
+  const isWatchPage = targetUrl.includes('/watch')
+  const isTimedText = targetUrl.includes('/timedtext')
+
   const headers = {
     ...options?.headers,
-    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Cookie': 'SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg',
+  } as Record<string, string>
+
+  if (isWatchPage) {
+    headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+    headers['Accept-Language'] = 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+    headers['Cookie'] = 'SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg'
   }
 
+  // Dual-fallback for timedtext (subtitles XML retrieval):
+  // 1. Try DIRECT fetch first (since timedtext CDNs might not block Vercel IPs)
+  // 2. If it fails, fall back to PROXY fetch
+  if (isTimedText) {
+    try {
+      const directRes = await fetch(targetUrl, {
+        ...options,
+        headers,
+      })
+      if (directRes.ok) {
+        const text = await directRes.text()
+        if (text && text.trim().length > 0) {
+          return new Response(text, {
+            status: directRes.status,
+            statusText: directRes.statusText,
+            headers: directRes.headers,
+          })
+        }
+      }
+    } catch (err) {
+      console.warn('Direct timedtext fetch failed, falling back to proxy:', err)
+    }
+
+    const proxyRes = await fetch(targetUrl, {
+      ...options,
+      headers,
+      ...(proxyAgent && { dispatcher: proxyAgent } as any),
+    })
+    return proxyRes
+  }
+
+  // For other endpoints (watch page, youtubei player API), route via proxy to bypass bot challenges
   const res = await fetch(targetUrl, {
     ...options,
     headers,
