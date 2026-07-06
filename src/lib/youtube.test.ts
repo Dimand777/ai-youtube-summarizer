@@ -40,20 +40,20 @@ describe('youtube utils', () => {
   describe('getTranscript', () => {
     it('should fetch transcript successfully in requested language', async () => {
       const mockItems = [
-        { text: 'Привет' },
-        { text: 'мир' }
+        { text: 'Привет', offset: 0 },
+        { text: 'мир', offset: 1000 }
       ]
       vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(mockItems)
 
       const result = await getTranscript('pgKg6jb7_5M')
-      expect(result).toBe('Привет мир')
+      expect(result).toBe('[00:00] Привет мир')
       expect(YoutubeTranscript.fetchTranscript).toHaveBeenCalledWith('pgKg6jb7_5M', expect.objectContaining({ lang: 'ru' }))
     })
 
     it('should fallback to default language if requested language fails', async () => {
       const mockItems = [
-        { text: 'Hello' },
-        { text: 'world' }
+        { text: 'Hello', offset: 0 },
+        { text: 'world', offset: 1000 }
       ]
       
       // Russian request fails, default request succeeds
@@ -62,7 +62,7 @@ describe('youtube utils', () => {
         .mockResolvedValueOnce(mockItems)
 
       const result = await getTranscript('pgKg6jb7_5M')
-      expect(result).toBe('Hello world')
+      expect(result).toBe('[00:00] Hello world')
       expect(YoutubeTranscript.fetchTranscript).toHaveBeenCalledTimes(2)
     })
 

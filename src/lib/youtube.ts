@@ -97,6 +97,13 @@ export function extractVideoId(url: string): string | null {
   return null
 }
 
+function formatTime(ms: number): string {
+  const totalSecs = Math.floor(ms / 1000)
+  const mins = Math.floor(totalSecs / 60)
+  const secs = totalSecs % 60
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
 export async function getTranscript(videoId: string): Promise<string> {
   const items = await YoutubeTranscript.fetchTranscript(videoId, { 
     lang: 'ru',
@@ -104,5 +111,28 @@ export async function getTranscript(videoId: string): Promise<string> {
   }).catch(() => YoutubeTranscript.fetchTranscript(videoId, {
     fetch: customFetch
   }))
-  return items.map(i => i.text).join(' ')
+
+  const blocks: string[] = []
+  let currentBlockTime = 0
+  let currentBlockText: string[] = []
+
+  for (const item of items) {
+    const offset = item.offset || 0
+    if (currentBlockText.length === 0) {
+      currentBlockTime = offset
+      currentBlockText.push(item.text)
+    } else if (offset - currentBlockTime >= 30000) {
+      blocks.push(`[${formatTime(currentBlockTime)}] ${currentBlockText.join(' ')}`)
+      currentBlockTime = offset
+      currentBlockText = [item.text]
+    } else {
+      currentBlockText.push(item.text)
+    }
+  }
+
+  if (currentBlockText.length > 0) {
+    blocks.push(`[${formatTime(currentBlockTime)}] ${currentBlockText.join(' ')}`)
+  }
+
+  return blocks.join('\n')
 }
