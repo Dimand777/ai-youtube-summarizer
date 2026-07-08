@@ -46,7 +46,8 @@ async function run() {
   if (serviceKey && !serviceKey.includes('your_supabase_service_role_key')) {
     console.log('🔄 Creating confirmed test user using Admin API (service_role key)...');
     const supabase = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false }
+      auth: { persistSession: false },
+      realtime: { transport: require('ws') }
     });
 
     const { data, error } = await supabase.auth.admin.createUser({
@@ -67,7 +68,8 @@ async function run() {
   } else if (anonKey && !anonKey.includes('your_supabase_anon_key')) {
     console.log('🔄 Registering test user using public signUp (anon key)...');
     const supabase = createClient(supabaseUrl, anonKey, {
-      auth: { persistSession: false }
+      auth: { persistSession: false },
+      realtime: { transport: require('ws') }
     });
 
     const { data, error } = await supabase.auth.signUp({

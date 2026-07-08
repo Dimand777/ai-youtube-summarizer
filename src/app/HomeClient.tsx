@@ -337,6 +337,7 @@ export default function HomeClient({ locale }: { locale: Locale }) {
             <div className="relative flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <input
+                  data-testid="youtube-url-input"
                   type="text"
                   value={url}
                   onChange={e => setUrl(e.target.value)}
@@ -357,6 +358,7 @@ export default function HomeClient({ locale }: { locale: Locale }) {
                 )}
               </div>
               <button
+                data-testid="submit-url-btn"
                 type="submit"
                 disabled={loading}
                 className="h-12 px-6 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:from-slate-800 disabled:to-slate-800 text-white font-bold text-xs rounded-xl shadow-md shadow-red-900/20 hover:shadow-red-900/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 flex-shrink-0"
@@ -399,7 +401,10 @@ export default function HomeClient({ locale }: { locale: Locale }) {
 
         {/* Loading / Results Panel */}
         {loading && (
-          <div className="w-full max-w-2xl bg-slate-800/20 border border-slate-800/60 rounded-2xl p-8 text-center shadow-lg mb-12">
+          <div
+            data-testid="loading-spinner"
+            className="w-full max-w-2xl bg-slate-800/20 border border-slate-800/60 rounded-2xl p-8 text-center shadow-lg mb-12"
+          >
             <div className="w-10 h-10 border-4 border-red-900/30 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
             <p className="text-sm font-semibold text-slate-300 mb-4">{t.landing.stages[stageIdx]}</p>
             <div className="space-y-2.5 max-w-[280px] mx-auto">
